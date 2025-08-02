@@ -1,0 +1,202 @@
+<!-- CHATBASE AI INTEGRATION FOR GAMMA SITE -->
+<!-- Copy and paste this entire code into a Custom HTML/Embed block in your Gamma editor -->
+
+<style>
+/* Chatbase Floating Button Styles */
+.medtools-chatbase {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    font-family: Arial, sans-serif;
+}
+
+.medtools-chat-btn {
+    display: none;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.medtools-chat-btn:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.medtools-status {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    display: none;
+    z-index: 10000;
+}
+
+.medtools-status.error {
+    background: #dc3545;
+}
+
+@keyframes medtools-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.medtools-loading {
+    animation: medtools-pulse 1.5s infinite;
+}
+</style>
+
+<!-- Chatbase Container -->
+<div class="medtools-chatbase">
+    <button class="medtools-chat-btn" id="medtoolsChatBtn">
+        💬 Chat with AI Assistant
+    </button>
+</div>
+
+<!-- Status Display -->
+<div class="medtools-status" id="medtoolsStatus"></div>
+
+<script>
+(function() {
+    console.log('🏥 Initializing Medtools AI Assistant...');
+    
+    // Configuration
+    var config = {
+        agentId: 'y7jTzyHhLeJFzUvlpBqqP',
+        domain: 'creator.medtools.id',
+        scriptUrl: 'https://www.chatbase.co/embed.min.js',
+        maxRetries: 3,
+        retryDelay: 2000
+    };
+    
+    var attempts = 0;
+    var isLoaded = false;
+    
+    // Show status message
+    function showStatus(message, isError) {
+        var status = document.getElementById('medtoolsStatus');
+        if (status) {
+            status.textContent = message;
+            status.className = 'medtools-status' + (isError ? ' error' : '');
+            status.style.display = 'block';
+            setTimeout(function() {
+                status.style.display = 'none';
+            }, 3000);
+        }
+    }
+    
+    // Initialize Chatbase proxy
+    if (!window.chatbase || window.chatbase("getState") !== "initialized") {
+        window.chatbase = function() {
+            if (!window.chatbase.q) window.chatbase.q = [];
+            window.chatbase.q.push(arguments);
+        };
+        window.chatbase = new Proxy(window.chatbase, {
+            get: function(target, prop) {
+                if (prop === "q") return target.q;
+                return function() { return target(prop, arguments); };
+            }
+        });
+    }
+    
+    // Load chatbase script
+    function loadChatbase() {
+        return new Promise(function(resolve, reject) {
+            var script = document.createElement("script");
+            script.src = config.scriptUrl;
+            script.id = config.agentId;
+            script.setAttribute("chatbotId", config.agentId);
+            script.setAttribute("domain", config.domain);
+            
+            script.onload = function() {
+                console.log('✅ Medtools AI Assistant loaded');
+                isLoaded = true;
+                showStatus('AI Assistant ready!');
+                resolve();
+            };
+            
+            script.onerror = function() {
+                console.warn('⚠️ Chatbase script failed to load');
+                reject(new Error('Script load failed'));
+            };
+            
+            document.body.appendChild(script);
+            
+            // Timeout after 10 seconds
+            setTimeout(function() {
+                if (!isLoaded) {
+                    reject(new Error('Load timeout'));
+                }
+            }, 10000);
+        });
+    }
+    
+    // Attempt to load with retries
+    function tryLoad() {
+        attempts++;
+        showStatus('Loading AI Assistant... (' + attempts + '/' + config.maxRetries + ')');
+        
+        loadChatbase().then(function() {
+            // Success - hide fallback button
+            var btn = document.getElementById('medtoolsChatBtn');
+            if (btn) btn.style.display = 'none';
+        }).catch(function(error) {
+            console.warn('Load attempt ' + attempts + ' failed:', error.message);
+            
+            if (attempts < config.maxRetries) {
+                setTimeout(tryLoad, config.retryDelay);
+            } else {
+                // All attempts failed - show fallback
+                showFallback();
+            }
+        });
+    }
+    
+    // Show fallback button
+    function showFallback() {
+        var btn = document.getElementById('medtoolsChatBtn');
+        if (btn) {
+            btn.style.display = 'block';
+            btn.onclick = function() {
+                alert('🏥 Medtools AI Assistant\n\nThe chat service is temporarily unavailable. Please try again later or contact our support team directly.\n\nWebsite: creator.medtools.id');
+            };
+        }
+        showStatus('Chat temporarily unavailable', true);
+    }
+    
+    // Initialize
+    function init() {
+        console.log('🚀 Starting Medtools AI integration...');
+        tryLoad();
+    }
+    
+    // Start when page is ready
+    if (document.readyState === 'complete') {
+        init();
+    } else {
+        window.addEventListener('load', init);
+    }
+    
+    // Error handling
+    window.addEventListener('error', function(e) {
+        if (e.filename && e.filename.includes('chatbase') && !isLoaded) {
+            showFallback();
+        }
+    });
+    
+})();
+</script>
+
+<!-- End of Chatbase Integration -->
